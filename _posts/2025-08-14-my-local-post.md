@@ -1,6 +1,6 @@
 ---
 title: "My Local Blog Post"
-date: 2025-08-14 14:00:00 +0000
+date: 2025-08-14
 categories: [Blog]
 tags: [chirpy, local, tutorial]
 ---
