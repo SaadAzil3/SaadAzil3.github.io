@@ -1,6 +1,6 @@
 ---
 title: HTB - Nibbles writeup
-date: 2025-08-20 08:00:00 +0000
+date: 2025-08-21 08:00:00 +0000
 categories:
   - CTF
   - HTB
