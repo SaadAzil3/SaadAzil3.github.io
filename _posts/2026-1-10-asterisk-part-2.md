@@ -9,7 +9,7 @@ pin: false
 
 ![Asterisk VoIP](../assets/images/asterisk/asterisk.png)
 
-In this post, we’ll build upon our previous setup. Now that the basic configuration is complete, we’ll dive into implementing advanced features such as IVR , Conference and More.
+In this post, we’ll build upon our previous setup. Now that the basic configuration is complete, we’ll dive into implementing advanced features such as IVR and Conference.
 
 ---
 
@@ -175,8 +175,6 @@ mixing_interval=10
 video_mode=follow_talker      ; If you use video phones
 ```
 
-I will explain one more Feature,
-
 ## Time Condition GotoIf()
 
 Time conditions allow your IVR system to behave differently depending on the time of day or day of the week. This is useful for businesses that have working hours, so callers get different messages during open hours versus after hours.
@@ -280,23 +278,17 @@ Back in Zoiper, you can now:
 
 ### Step 4: Troubleshooting with Asterisk CLI
 
-The Asterisk CLI is essential for monitoring, debugging, and troubleshooting. Some useful commands include:
+The CLI Mode is the primary tool for debugging. Here are the most effective commands for monitoring the system:
 
 ```bash
-pjsip show endpoints            ; List all SIP users and their status
-pjsip show registrations        ; Show registered SIP accounts
-pjsip show channels             ; Show active SIP calls
-core show channels       ; Show all active channels
-core show applications   ; List all available applications
-logger show channels     ; Check log output
+pjsip show endpoints     # Verify if users are online
+pjsip show channels      # View active calls in progress
+core show applications   # Check available dialplan functions
 ```
 
-These commands allow you to verify registrations, monitor calls, check IVR behavior, and troubleshoot any issues in real time.
-
-lets see for example the `SIP` users :
-```bash
-pjsip show endpoints
-```
+Running `pjsip show endpoints` provides a quick snapshot of all configured users and their current connectivity status.
 ![Show SIP Users](../assets/images/asterisk-2/SIP-Users.png)
 
+### Conclusion
 
+This testing phase confirms that the `Asterisk` server is correctly processing `PJSIP` registrations and routing traffic. By validating the connection through both the `Zoiper` interface and the `Asterisk CLI`, we ensure the environment is stable. With this functional foundation, the system is now ready for more advanced configurations like `call queues`, `external trunks`, and `custom dialplan` logic.
